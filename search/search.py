@@ -95,9 +95,24 @@ def breadthFirstSearch(problem: SearchProblem):
     util.raiseNotDefined()
 
 def uniformCostSearch(problem: SearchProblem):
-    """Search the node of least total cost first."""
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    """Return a minimum-cost path for nonnegative step costs."""
+    start = problem.getStartState()
+    fringe = util.PriorityQueue()
+    fringe.push((start, [], 0), 0)
+    best_cost = {start: 0}
+
+    while not fringe.isEmpty():
+        state, path, cost = fringe.pop()
+        if cost > best_cost[state]:
+            continue  # A cheaper route superseded this queued entry.
+        if problem.isGoalState(state):
+            return path
+        for successor, action, step_cost in problem.getSuccessors(state):
+            new_cost = cost + step_cost
+            if new_cost < best_cost.get(successor, float('inf')):
+                best_cost[successor] = new_cost
+                fringe.push((successor, path + [action], new_cost), new_cost)
+    return []
 
 def nullHeuristic(state, problem=None):
     """
@@ -107,9 +122,25 @@ def nullHeuristic(state, problem=None):
     return 0
 
 def aStarSearch(problem: SearchProblem, heuristic=nullHeuristic):
-    """Search the node that has the lowest combined cost and heuristic first."""
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    """Search by g+h, retaining improved paths and skipping stale entries."""
+    start = problem.getStartState()
+    fringe = util.PriorityQueue()
+    fringe.push((start, [], 0), heuristic(start, problem))
+    best_cost = {start: 0}
+
+    while not fringe.isEmpty():
+        state, path, cost = fringe.pop()
+        if cost > best_cost[state]:
+            continue
+        if problem.isGoalState(state):
+            return path
+        for successor, action, step_cost in problem.getSuccessors(state):
+            new_cost = cost + step_cost
+            if new_cost < best_cost.get(successor, float('inf')):
+                best_cost[successor] = new_cost
+                priority = new_cost + heuristic(successor, problem)
+                fringe.push((successor, path + [action], new_cost), priority)
+    return []
 
 
 # Abbreviations
