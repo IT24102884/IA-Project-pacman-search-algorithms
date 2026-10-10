@@ -415,36 +415,55 @@ class AStarFoodSearchAgent(SearchAgent):
         self.searchType = FoodSearchProblem
 
 def foodHeuristic(state: Tuple[Tuple, List[List]], problem: FoodSearchProblem):
-    """
-    Your heuristic for the FoodSearchProblem goes here.
+    """Nearest-food maze distance plus a minimum spanning tree of food."""
+    position, food_grid = state
+    food = food_grid.asList()
+    if not food:
+        return 0
 
-    This heuristic must be consistent to ensure correctness.  First, try to come
-    up with an admissible heuristic; almost all admissible heuristics will be
-    consistent as well.
+    # Every map is local to this problem's fixed walls; never modify food_grid.
+    distance_maps = problem.heuristicInfo.setdefault('food_distance_maps', {})
+    tree_costs = problem.heuristicInfo.setdefault('food_mst_costs', {})
+    walls = problem.walls
 
-    If using A* ever finds a solution that is worse uniform cost search finds,
-    your heuristic is *not* consistent, and probably not admissible!  On the
-    other hand, inadmissible or inconsistent heuristics may find optimal
-    solutions, so be careful.
+    def distances_from(source):
+        if source not in distance_maps:
+            distances = {source: 0}
+            fringe = util.Queue()
+            fringe.push(source)
+            while not fringe.isEmpty():
+                x, y = fringe.pop()
+                for dx, dy in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+                    neighbor = (x + dx, y + dy)
+                    nx, ny = neighbor
+                    if (0 <= nx < walls.width and 0 <= ny < walls.height
+                            and not walls[nx][ny] and neighbor not in distances):
+                        distances[neighbor] = distances[(x, y)] + 1
+                        fringe.push(neighbor)
+            distance_maps[source] = distances
+        return distance_maps[source]
 
-    The state is a tuple ( pacmanPosition, foodGrid ) where foodGrid is a Grid
-    (see game.py) of either True or False. You can call foodGrid.asList() to get
-    a list of food coordinates instead.
+    # Maze distances are symmetric, so a food-rooted map serves any position.
+    nearest = min(distances_from(dot).get(position, float('inf')) for dot in food)
+    food_key = frozenset(food)
+    if food_key not in tree_costs:
+        # Prim's algorithm on the complete graph of food-to-food maze distances.
+        root = food[0]
+        cheapest_edge = {
+            dot: distances_from(root).get(dot, float('inf')) for dot in food[1:]
+        }
+        tree_cost = 0
+        while cheapest_edge:
+            closest = min(cheapest_edge, key=cheapest_edge.get)
+            tree_cost += cheapest_edge.pop(closest)
+            distances = distances_from(closest)
+            for dot in cheapest_edge:
+                cheapest_edge[dot] = min(
+                    cheapest_edge[dot], distances.get(dot, float('inf'))
+                )
+        tree_costs[food_key] = tree_cost
+    return nearest + tree_costs[food_key]
 
-    If you want access to info like walls, capsules, etc., you can query the
-    problem.  For example, problem.walls gives you a Grid of where the walls
-    are.
-
-    If you want to *store* information to be reused in other calls to the
-    heuristic, there is a dictionary called problem.heuristicInfo that you can
-    use. For example, if you only want to count the walls once and store that
-    value, try: problem.heuristicInfo['wallCount'] = problem.walls.count()
-    Subsequent calls to this heuristic can access
-    problem.heuristicInfo['wallCount']
-    """
-    position, foodGrid = state
-    "*** YOUR CODE HERE ***"
-    return 0
 
 class ClosestDotSearchAgent(SearchAgent):
     "Search for all food using a sequence of searches"
