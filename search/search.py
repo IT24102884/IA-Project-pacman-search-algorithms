@@ -90,9 +90,22 @@ def depthFirstSearch(problem: SearchProblem):
     util.raiseNotDefined()
 
 def breadthFirstSearch(problem: SearchProblem):
-    """Search the shallowest nodes in the search tree first."""
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    """Return a shortest action sequence when all step costs are equal."""
+    start = problem.getStartState()
+    fringe = util.Queue()
+    fringe.push((start, []))
+    discovered = {start}
+
+    while not fringe.isEmpty():
+        state, path = fringe.pop()
+        if problem.isGoalState(state):
+            return path
+        for successor, action, step_cost in problem.getSuccessors(state):
+            if successor not in discovered:
+                # Mark on insertion: each state enters the queue only once.
+                discovered.add(successor)
+                fringe.push((successor, path + [action]))
+    return []
 
 def uniformCostSearch(problem: SearchProblem):
     """Return a minimum-cost path for nonnegative step costs."""
