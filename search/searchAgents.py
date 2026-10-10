@@ -169,49 +169,30 @@ class PositionSearchProblem(search.SearchProblem):
         self._visited, self._visitedlist, self._expanded = {}, [], 0 # DO NOT CHANGE
 
     def getStartState(self):
-        return self.startState
+        """State: (position, four visited flags in self.corners order)."""
+        visited = tuple(self.startingPosition == corner for corner in self.corners)
+        return self.startingPosition, visited
 
-    def isGoalState(self, state):
-        isGoal = state == self.goal
+    def isGoalState(self, state: Any):
+        """The route is complete once all four corners have been touched."""
+        position, visited = state
+        return all(visited)
 
-        # For display purposes only
-        if isGoal and self.visualize:
-            self._visitedlist.append(state)
-            import __main__
-            if '_display' in dir(__main__):
-                if 'drawExpandedCells' in dir(__main__._display): #@UndefinedVariable
-                    __main__._display.drawExpandedCells(self._visitedlist) #@UndefinedVariable
-
-        return isGoal
-
-    def getSuccessors(self, state):
-        """
-        Returns successor states, the actions they require, and a cost of 1.
-
-         As noted in search.py:
-             For a given state, this should return a list of triples,
-         (successor, action, stepCost), where 'successor' is a
-         successor to the current state, 'action' is the action
-         required to get there, and 'stepCost' is the incremental
-         cost of expanding to that successor
-        """
-
+    def getSuccessors(self, state: Any):
+        """Generate legal unit-cost moves without mutating the parent state."""
+        position, visited = state
         successors = []
         for action in [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]:
-            x,y = state
             dx, dy = Actions.directionToVector(action)
-            nextx, nexty = int(x + dx), int(y + dy)
+            nextx, nexty = int(position[0] + dx), int(position[1] + dy)
             if not self.walls[nextx][nexty]:
-                nextState = (nextx, nexty)
-                cost = self.costFn(nextState)
-                successors.append( ( nextState, action, cost) )
-
-        # Bookkeeping for display purposes
+                next_position = (nextx, nexty)
+                next_visited = tuple(
+                    visited[index] or next_position == corner
+                    for index, corner in enumerate(self.corners)
+                )
+                successors.append(((next_position, next_visited), action, 1))
         self._expanded += 1 # DO NOT CHANGE
-        if state not in self._visited:
-            self._visited[state] = True
-            self._visitedlist.append(state)
-
         return successors
 
     def getCostOfActions(self, actions):
@@ -291,15 +272,14 @@ class CornersProblem(search.SearchProblem):
         self._expanded = 0 # DO NOT CHANGE; Number of search nodes expanded
 
     def getStartState(self):
-     """State: (position, four visited flags in self.corners order)."""
-     visited = tuple(self.startingPosition == corner for corner in self.corners)
-     return self.startingPosition, visited
-    
+        """State: (position, four visited flags in self.corners order)."""
+        visited = tuple(self.startingPosition == corner for corner in self.corners)
+        return self.startingPosition, visited
 
     def isGoalState(self, state: Any):
-     """The route is complete once all four corners have been touched."""
-     position, visited = state
-     return all(visited)
+        """The route is complete once all four corners have been touched."""
+        position, visited = state
+        return all(visited)
 
     def getSuccessors(self, state: Any):
         """Generate legal unit-cost moves without mutating the parent state."""
